@@ -207,6 +207,14 @@
         {
             "name": "donaldduck",
             "displayName": "Donald Duck"
+        },
+        {
+            "name": "rhicroll1",
+            "displayName": "Rhic Roll 1"
+        },
+        {
+            "name": "rhicroll2",
+            "displayName": "Rhic Roll 2"
         }
     ],
     "users": [

@@ -14,14 +14,6 @@
  */
 package org.candlepin.guice;
 
-import com.google.common.base.Function;
-import com.google.inject.AbstractModule;
-import com.google.inject.Singleton;
-import com.google.inject.matcher.Matcher;
-import com.google.inject.matcher.Matchers;
-import com.google.inject.name.Names;
-import com.google.inject.persist.jpa.JpaPersistModule;
-
 import org.candlepin.audit.EventSink;
 import org.candlepin.audit.EventSinkImpl;
 import org.candlepin.auth.Principal;
@@ -86,6 +78,7 @@ import org.candlepin.resource.ProductResource;
 import org.candlepin.resource.RoleResource;
 import org.candlepin.resource.RootResource;
 import org.candlepin.resource.RulesResource;
+import org.candlepin.resource.SpliceResource;
 import org.candlepin.resource.StatisticResource;
 import org.candlepin.resource.StatusResource;
 import org.candlepin.resource.SubscriptionResource;
@@ -109,6 +102,14 @@ import org.candlepin.util.X509ExtensionUtil;
 import org.quartz.JobListener;
 import org.quartz.spi.JobFactory;
 import org.xnap.commons.i18n.I18n;
+
+import com.google.common.base.Function;
+import com.google.inject.AbstractModule;
+import com.google.inject.Singleton;
+import com.google.inject.matcher.Matcher;
+import com.google.inject.matcher.Matchers;
+import com.google.inject.name.Names;
+import com.google.inject.persist.jpa.JpaPersistModule;
 
 /**
  * CandlepinProductionConfiguration
@@ -178,6 +179,8 @@ public class CandlepinModule extends AbstractModule {
         bind(JsRules.class).toProvider(JsRulesProvider.class);
         bind(UserResource.class);
         bind(UniqueIdGenerator.class).to(DefaultUniqueIdGenerator.class);
+        bind(SpliceResource.class);
+
 
         bind(I18n.class).toProvider(I18nProvider.class);
         bind(AuthInterceptor.class);
