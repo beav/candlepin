@@ -20,6 +20,7 @@ import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -28,6 +29,7 @@ import java.util.Set;
 
 import org.candlepin.model.CertificateSerial;
 import org.candlepin.model.CertificateSerialCurator;
+import org.candlepin.model.Consumer;
 import org.candlepin.model.Entitlement;
 import org.candlepin.model.EntitlementCertificate;
 import org.candlepin.model.EntitlementCertificateCurator;
@@ -135,6 +137,59 @@ public class DefaultEntitlementCertServiceAdapter extends
         return providedProducts;
     }
 
+    public X509Certificate createSpliceX509Cert(Set<Product> products, BigInteger serialNumber, KeyPair keyPair, Date startDate, Date endDate)
+        throws GeneralSecurityException, IOException {
+
+        
+        Map<String, EnvironmentContent> promotedContent = new HashMap<String, EnvironmentContent>();
+        
+        Consumer consumer = new Consumer();
+        consumer.setEnvironment(null);
+        
+        Entitlement ent = new Entitlement();
+        Subscription sub = new Subscription();
+        Product phonyProduct = new Product("rhic", "RHIC product");
+        Pool pool = new Pool();
+        
+        pool.setProductName("RHIC Product");
+        ent.setPool(pool);
+        
+        sub.setId("SUB-ID");
+        sub.setQuantity(1L);
+        sub.setStartDate(startDate);
+        sub.setEndDate(endDate);
+        sub.setProduct(phonyProduct);
+        ent.setAccountNumber("RHICNUM");
+        
+
+        // build up extensions
+        Set<X509ExtensionWrapper> extensions =  new LinkedHashSet<X509ExtensionWrapper>();
+        for (Product prod : Collections2
+            .filter(products, X509Util.PROD_FILTER_PREDICATE)) {
+            extensions.addAll(extensionUtil.productExtensions(prod));
+        
+            extensions.addAll(extensionUtil.contentExtensions(prod.getProductContent(), null, promotedContent, consumer));
+        }
+        
+        extensions.addAll(extensionUtil.subscriptionExtensions(sub, ent));
+
+        
+
+        for (X509ExtensionWrapper eWrapper : extensions) {
+            log.debug(String.format("Extension %s with value %s",
+                eWrapper.getOid(), eWrapper.getValue()));
+        }
+ 
+        
+        X509Certificate x509Cert =  this.pki.createX509Certificate(
+            "cn=testtesttest", extensions, null, startDate,
+            endDate, keyPair, serialNumber, null);
+        log.debug(x509Cert.toString());
+       
+        return x509Cert;
+        
+    }
+    
     public X509Certificate createX509Certificate(Entitlement ent,
         Subscription sub, Product product, BigInteger serialNumber,
         KeyPair keyPair, boolean useContentPrefix)

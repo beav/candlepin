@@ -14,6 +14,12 @@
  */
 package org.candlepin.resource;
 
+import java.io.IOException;
+import java.math.BigInteger;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
@@ -28,19 +34,12 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.log4j.Logger;
-import org.candlepin.controller.Entitler;
-import org.candlepin.controller.PoolManager;
-import org.candlepin.exceptions.BadRequestException;
-import org.candlepin.model.Consumer;
-import org.candlepin.model.ConsumerCurator;
-import org.candlepin.model.ConsumerInstalledProduct;
-import org.candlepin.model.ConsumerType;
-import org.candlepin.model.ConsumerTypeCurator;
 import org.candlepin.model.Entitlement;
-import org.candlepin.model.Owner;
-import org.candlepin.model.OwnerCurator;
+import org.candlepin.model.EntitlementCertificate;
+import org.candlepin.model.Product;
 import org.candlepin.model.ProductCurator;
-import org.candlepin.model.SubscriptionCurator;
+import org.candlepin.pki.PKIUtility;
+import org.candlepin.service.impl.DefaultEntitlementCertServiceAdapter;
 
 import com.google.inject.Inject;
 
@@ -52,26 +51,19 @@ public class SpliceResource {
     
     private static Logger log = Logger.getLogger(SpliceResource.class);
     
-    private OwnerCurator ownerCurator;
     private ProductCurator productCurator;
+    private PKIUtility pkiUtility;
 
-    private SubscriptionCurator subCurator;
-    private ConsumerCurator consumerCurator;
-    private ConsumerTypeCurator consumerTypeCurator;
-    private Entitler entitler;
-    private PoolManager poolManager;
+    // don't use the interface, since the interface is for hosted and standalone
+    private DefaultEntitlementCertServiceAdapter entCertAdapter;
 
 
     @Inject
-    public SpliceResource(OwnerCurator ownerCurator, ProductCurator productCurator, SubscriptionCurator subCurator,
-        ConsumerCurator consumerCurator, ConsumerTypeCurator consumerTypeCurator, Entitler entitler, PoolManager poolManager) {
-        this.ownerCurator = ownerCurator;
+    public SpliceResource(ProductCurator productCurator,
+        DefaultEntitlementCertServiceAdapter entCertAdapter, PKIUtility pkiUtility) {
         this.productCurator = productCurator;
-        this.subCurator = subCurator;
-        this.consumerCurator = consumerCurator;
-        this.consumerTypeCurator = consumerTypeCurator;
-        this.entitler = entitler;
-        this.poolManager = poolManager;
+        this.entCertAdapter = entCertAdapter;
+        this.pkiUtility = pkiUtility;
         
     }
     
@@ -83,50 +75,61 @@ public class SpliceResource {
     }
     
     @GET
-    @Produces(MediaType.APPLICATION_JSON) // maybe just return a raw cert here, not sure
+    @Produces(MediaType.APPLICATION_JSON)
     @Path("cert")
-    public List<Entitlement> getCertForProducts(@QueryParam("installed") String[] installed, @QueryParam("start") Date startDate,
-                                                    @QueryParam("end") Date endDate, @QueryParam("rhic") String rhicId) {
-        // start and end date are needed, but let's just make some up for now
+    public Entitlement getCertForProducts(@QueryParam("productId") String[] products, @QueryParam("start") Date startDate,
+                                                    @QueryParam("end") Date endDate, @QueryParam("rhic") String rhicId) throws IOException {
+        
+        List<String> productIds = Arrays.asList(products);
+        Set<Product> productSet = new HashSet<Product>();
+        // just use right now and one hour from now, temporarily
+        
         startDate = new Date();
         endDate = DateUtils.addHours(startDate, 1);
-        List<String> installedIdNames = Arrays.asList(installed);
-    
-        Set<ConsumerInstalledProduct> consumerInstalledProducts = new HashSet<ConsumerInstalledProduct>(); 
-
-        for (String str: installedIdNames) {
-            String[] tokens = str.split("!");
-            String id = tokens[0];
-            String name = tokens[1];
-            log.debug("installed product id: " + id + ", name: " + name);
-            consumerInstalledProducts.add(new ConsumerInstalledProduct(id, name));            
+        KeyPair keyPair = null;
+        try {
+            keyPair = pkiUtility.generateNewKeyPair();
         }
-                
-        // timestamp is used in name for debugging, in case it isn't cleaned up
-        long unixTime = System.currentTimeMillis() / 1000L;
-        
-        Owner owner = ownerCurator.lookupByKey(rhicId);
-        if (owner == null) {
-            throw new BadRequestException("Owner " + rhicId + " not found");
+        catch (NoSuchAlgorithmException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
         }
-        ConsumerType type = consumerTypeCurator.lookupByLabel("system");
-        Consumer consumer = consumerCurator.create(new Consumer("foo" + unixTime, "", owner, type));
 
 
-        //consumer.setInstalledProducts(consumerInstalledProducts);
-        for (ConsumerInstalledProduct cip : consumerInstalledProducts) {
-            consumer.addInstalledProduct(cip);
+        X509Certificate cert = null;
+        for (String p : productIds){
+            productSet.add(productCurator.find(p));
+        }
+            
+        try {
+            cert = entCertAdapter.createSpliceX509Cert(productSet, new BigInteger(rhicId), keyPair, startDate, endDate);
+        }
+        catch (GeneralSecurityException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
         
-        consumerCurator.update(consumer);
+        EntitlementCertificate entitlementCert = new EntitlementCertificate();
         
-        List<Entitlement> entitlements = entitler.bindByProducts(null, consumer, null);
+        entitlementCert.setCertAsBytes(pkiUtility.getPemEncoded(cert));
         
-        poolManager.removeAllEntitlements(consumer);
-       
-        consumerCurator.delete(consumer);
-                
-        return entitlements;
+        entitlementCert.setKeyAsBytes(pkiUtility.getPemEncoded(keyPair.getPrivate()));
+
+        Entitlement toReturn = new Entitlement();
+        Set<EntitlementCertificate> certs = new HashSet<EntitlementCertificate>();
+        certs.add(entitlementCert);
+        
+        toReturn.setCertificates(certs);
+        
+        toReturn.setStartDate(startDate);
+        toReturn.setEndDate(endDate);
+        
+        return toReturn;
+
         
     }
 }
