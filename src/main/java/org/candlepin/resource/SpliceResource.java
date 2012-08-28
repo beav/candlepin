@@ -34,6 +34,8 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.log4j.Logger;
+import org.candlepin.model.CertificateSerial;
+import org.candlepin.model.CertificateSerialCurator;
 import org.candlepin.model.Entitlement;
 import org.candlepin.model.EntitlementCertificate;
 import org.candlepin.model.Product;
@@ -53,6 +55,7 @@ public class SpliceResource {
     
     private ProductCurator productCurator;
     private PKIUtility pkiUtility;
+    private CertificateSerialCurator serialCurator;
 
     // don't use the interface, since the interface is for hosted and standalone
     private DefaultEntitlementCertServiceAdapter entCertAdapter;
@@ -60,10 +63,11 @@ public class SpliceResource {
 
     @Inject
     public SpliceResource(ProductCurator productCurator,
-        DefaultEntitlementCertServiceAdapter entCertAdapter, PKIUtility pkiUtility) {
+        DefaultEntitlementCertServiceAdapter entCertAdapter, PKIUtility pkiUtility, CertificateSerialCurator serialCurator) {
         this.productCurator = productCurator;
         this.entCertAdapter = entCertAdapter;
         this.pkiUtility = pkiUtility;
+        this.serialCurator = serialCurator;
         
     }
     
@@ -78,12 +82,12 @@ public class SpliceResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("cert")
     public Entitlement getCertForProducts(@QueryParam("productId") String[] products, @QueryParam("start") Date startDate,
-                                                    @QueryParam("end") Date endDate, @QueryParam("rhic") String rhicId) throws IOException {
+                                                    @QueryParam("end") Date endDate, @QueryParam("rhicUUID") String rhicUUID) throws IOException {
         
         List<String> productIds = Arrays.asList(products);
         Set<Product> productSet = new HashSet<Product>();
-        // just use right now and one hour from now, temporarily
         
+        // just use right now and one hour from now, temporarily
         startDate = new Date();
         endDate = DateUtils.addHours(startDate, 1);
         KeyPair keyPair = null;
@@ -100,9 +104,15 @@ public class SpliceResource {
         for (String p : productIds){
             productSet.add(productCurator.find(p));
         }
-            
+
+        CertificateSerial serial = new CertificateSerial(endDate);
+        serialCurator.create(serial);
+
+
+        
         try {
-            cert = entCertAdapter.createSpliceX509Cert(productSet, new BigInteger(rhicId), keyPair, startDate, endDate);
+            cert = entCertAdapter.createSpliceX509Cert(productSet, BigInteger.valueOf(serial.getId()),
+                                                            keyPair, startDate, endDate, rhicUUID);
         }
         catch (GeneralSecurityException e) {
             // TODO Auto-generated catch block
@@ -120,6 +130,7 @@ public class SpliceResource {
         entitlementCert.setKeyAsBytes(pkiUtility.getPemEncoded(keyPair.getPrivate()));
 
         Entitlement toReturn = new Entitlement();
+        
         Set<EntitlementCertificate> certs = new HashSet<EntitlementCertificate>();
         certs.add(entitlementCert);
         
@@ -127,6 +138,7 @@ public class SpliceResource {
         
         toReturn.setStartDate(startDate);
         toReturn.setEndDate(endDate);
+        
         
         return toReturn;
 

@@ -137,7 +137,7 @@ public class DefaultEntitlementCertServiceAdapter extends
         return providedProducts;
     }
 
-    public X509Certificate createSpliceX509Cert(Set<Product> products, BigInteger serialNumber, KeyPair keyPair, Date startDate, Date endDate)
+    public X509Certificate createSpliceX509Cert(Set<Product> products, BigInteger serialNumber, KeyPair keyPair, Date startDate, Date endDate, String rhicId)
         throws GeneralSecurityException, IOException {
 
         
@@ -154,7 +154,7 @@ public class DefaultEntitlementCertServiceAdapter extends
         pool.setProductName("RHIC Product");
         ent.setPool(pool);
         
-        sub.setId("SUB-ID");
+        sub.setId(rhicId);
         sub.setQuantity(1L);
         sub.setStartDate(startDate);
         sub.setEndDate(endDate);
