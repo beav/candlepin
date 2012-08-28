@@ -20,11 +20,10 @@ import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -34,6 +33,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.log4j.Logger;
+import org.candlepin.exceptions.BadRequestException;
 import org.candlepin.model.CertificateSerial;
 import org.candlepin.model.CertificateSerialCurator;
 import org.candlepin.model.Entitlement;
@@ -81,11 +81,11 @@ public class SpliceResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("cert")
-    public Entitlement getCertForProducts(@QueryParam("productId") String[] products, @QueryParam("start") Date startDate,
+    public Entitlement getCertForProducts(@QueryParam("productIDs") String products, @QueryParam("start") Date startDate,
                                                     @QueryParam("end") Date endDate, @QueryParam("rhicUUID") String rhicUUID) throws IOException {
         
-        List<String> productIds = Arrays.asList(products);
-        Set<Product> productSet = new HashSet<Product>();
+        log.debug("productIDs: " + products);
+        Set<Product> productSet = findProducts(products);
         
         // just use right now and one hour from now, temporarily
         startDate = new Date();
@@ -99,16 +99,10 @@ public class SpliceResource {
             e1.printStackTrace();
         }
 
-
         X509Certificate cert = null;
-        for (String p : productIds){
-            productSet.add(productCurator.find(p));
-        }
 
         CertificateSerial serial = new CertificateSerial(endDate);
         serialCurator.create(serial);
-
-
         
         try {
             cert = entCertAdapter.createSpliceX509Cert(productSet, BigInteger.valueOf(serial.getId()),
@@ -142,7 +136,24 @@ public class SpliceResource {
         
         return toReturn;
 
+   }
+    
+    private Set<Product> findProducts(String productString) {
+        Set<Product> productSet = new HashSet<Product>();
+        Product product = null;
         
+        if (productString != null && !productString.equals("")) {
+            for (String s : productString.split(" ")) {
+                log.debug("evaluating " + s);
+                product = productCurator.find(s);
+                if (product == null) {
+                    throw new BadRequestException("Product " + s + " does not exist in product database");
+                }
+                log.debug("adding product " + s + " to set");
+                productSet.add(product);
+            }
+        }
+        return productSet;
     }
 }
 
