@@ -121,6 +121,8 @@ public class SpliceResource {
         
         entitlementCert.setCertAsBytes(pkiUtility.getPemEncoded(cert));
         
+        entitlementCert.setSerial(serial);
+        
         entitlementCert.setKeyAsBytes(pkiUtility.getPemEncoded(keyPair.getPrivate()));
 
         Entitlement toReturn = new Entitlement();
