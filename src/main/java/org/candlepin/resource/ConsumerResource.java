@@ -661,6 +661,16 @@ public class ConsumerResource {
             consumerCurator.update(toUpdate);
         }
     }
+    @PUT
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("{consumer_uuid}")
+    @Transactional
+    public void updateLastCheckin(
+        @PathParam("consumer_uuid") @Verify(Consumer.class) String uuid) {
+            Consumer c = consumerCurator.findByUuid(uuid);
+            consumerCurator.updateLastCheckin(c);
+        }
+
 
     // Requires security hole since security interceptor will intercept when the method is
     // called. This is because it is protected. This method is called from other resources,

@@ -52,6 +52,7 @@ BuildRequires: hornetq >= 0:2.2.11
 BuildRequires: google-guice >= 0:3.0
 BuildRequires: log4j
 BuildRequires: jakarta-commons-lang
+BuildRequires: tomcat6-servlet-2.5-api
 BuildRequires: jakarta-commons-io
 BuildRequires: apache-commons-codec
 BuildRequires: codehaus-jackson >= 0:1.9.2
@@ -67,7 +68,7 @@ BuildRequires: jms >= 0:1.1
 BuildRequires: oauth
 BuildRequires: rhino
 BuildRequires: slf4j >= 0:1.6.1
-BuildRequires: quartz >= 0:2.1.5
+BuildRequires: quartz2-candlepin
 # needed to setup runtime deps, not for compilation
 BuildRequires: c3p0
 BuildRequires: scannotation
@@ -105,7 +106,7 @@ Requires: hornetq >= 0:2.2.11
 Requires: netty
 Requires: oauth
 Requires: rhino
-Requires: quartz >= 0:2.1.5
+#Requires: quartz >= 0:2.1.5
 Requires: log4j
 Requires: glassfish-jaxb
 Requires: scannotation
