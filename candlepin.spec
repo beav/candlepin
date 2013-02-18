@@ -133,15 +133,6 @@ Group: Internet/Applications
 %description tomcat6
 Candlepin web application for tomcat6
 
-%package jboss
-Summary: Candlepin web application for jboss
-Requires: jbossas >= 4.3
-Requires: candlepin = %{version}
-Group: Internet/Applications
-
-%description jboss
-Candlepin web application for jboss
-
 %package devel
 Summary: Development libraries for candlepin integration
 Group: Development/Libraries
@@ -219,17 +210,6 @@ ant -Ddistlibdir=$RPM_BUILD_ROOT/%{_localstatedir}/lib/tomcat6/webapps/%{name}/W
 %endif
 ln -s /etc/candlepin/certs/keystore $RPM_BUILD_ROOT/%{_sysconfdir}/tomcat6/keystore
 
-# jbossas
-install -d -m 755 $RPM_BUILD_ROOT/%{_localstatedir}/lib/jbossas/server/production/deploy/
-install -d -m 755 $RPM_BUILD_ROOT/%{_localstatedir}/lib/jbossas/server/production/deploy/%{name}.war
-unzip target/%{name}-%{version}.war -d $RPM_BUILD_ROOT/%{_localstatedir}/lib/jbossas/server/production/deploy/%{name}.war/
-
-%if !0%{?reqcpdeps}
-#remove the copied jars and resymlink
-rm $RPM_BUILD_ROOT/%{_localstatedir}/lib/jbossas/server/production/deploy/%{name}.war/WEB-INF/lib/*.jar
-ant -Ddistlibdir=$RPM_BUILD_ROOT/%{_localstatedir}/lib/jbossas/server/production/deploy/%{name}.war/WEB-INF/lib/ initjars
-%endif
-
 # devel
 install -d -m 755 $RPM_BUILD_ROOT/%{_datadir}/%{name}/lib/
 install -m 644 target/%{name}-api-%{version}.jar $RPM_BUILD_ROOT/%{_datadir}/%{name}/lib/
@@ -291,15 +271,6 @@ fi
 %config %attr(644, root, root) %{_sysconfdir}/%{name}/certs/candlepin-upstream-ca.crt
 %doc LICENSE
 %doc README
-
-%files jboss
-%defattr(-,jboss,jboss,-)
-%{_localstatedir}/lib/jbossas/server/production/deploy/%{name}.war/*
-%{_localstatedir}/lib/%{name}
-%{_localstatedir}/log/%{name}
-%{_localstatedir}/cache/%{name}
-%defattr(600,jboss,jboss,-)
-%config(noreplace) %{_sysconfdir}/%{name}/%{name}.conf
 
 %files tomcat6
 %defattr(644,tomcat,tomcat,775)
