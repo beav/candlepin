@@ -663,7 +663,7 @@ public class ConsumerResource {
     }
     @PUT
     @Produces(MediaType.APPLICATION_JSON)
-    @Path("{consumer_uuid}")
+    @Path("{consumer_uuid}/checkin")
     @Transactional
     public void updateLastCheckin(
         @PathParam("consumer_uuid") @Verify(Consumer.class) String uuid) {
