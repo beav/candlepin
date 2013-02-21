@@ -671,7 +671,8 @@ public class ConsumerResource {
             Date checkinDate = null;
             if (checkinDateStr != null) {
                 checkinDate = ResourceDateParser.parseDateString(checkinDateStr);
-                }
+            }
+            log.debug("parsed " + checkinDateStr + " to " + checkinDate);
             Consumer c = consumerCurator.findByUuid(uuid);
             if (checkinDate != null) {
                 consumerCurator.updateLastCheckin(c, checkinDate);
