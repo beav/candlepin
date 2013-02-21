@@ -666,9 +666,11 @@ public class ConsumerResource {
     @Path("{consumer_uuid}/checkin")
     @Transactional
     public void updateLastCheckin(
-        @PathParam("consumer_uuid") @Verify(Consumer.class) String uuid) {
+        @PathParam("consumer_uuid") @Verify(Consumer.class) String uuid,
+        @PathParam("checkin_date") String checkinDateStr) {
+            Date checkinDate = ResourceDateParser.parseDateString(checkinDateStr);
             Consumer c = consumerCurator.findByUuid(uuid);
-            consumerCurator.updateLastCheckin(c);
+            consumerCurator.updateLastCheckin(c, checkinDate);
         }
 
 
