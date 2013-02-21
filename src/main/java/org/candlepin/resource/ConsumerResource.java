@@ -667,7 +667,7 @@ public class ConsumerResource {
     @Transactional
     public void updateLastCheckin(
         @PathParam("consumer_uuid") @Verify(Consumer.class) String uuid,
-        @PathParam("checkin_date") String checkinDateStr) {
+        @QueryParam("checkin_date") String checkinDateStr) {
             Date checkinDate = null;
             if (checkinDateStr != null) {
                 checkinDate = ResourceDateParser.parseDateString(checkinDateStr);
