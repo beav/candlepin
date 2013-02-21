@@ -668,9 +668,18 @@ public class ConsumerResource {
     public void updateLastCheckin(
         @PathParam("consumer_uuid") @Verify(Consumer.class) String uuid,
         @PathParam("checkin_date") String checkinDateStr) {
-            Date checkinDate = ResourceDateParser.parseDateString(checkinDateStr);
+            Date checkinDate = null;
+            if (checkinDateStr != null) {
+                checkinDate = ResourceDateParser.parseDateString(checkinDateStr);
+                }
             Consumer c = consumerCurator.findByUuid(uuid);
-            consumerCurator.updateLastCheckin(c, checkinDate);
+            if (checkinDate != null) {
+                consumerCurator.updateLastCheckin(c, checkinDate);
+            }
+            else {
+                consumerCurator.updateLastCheckin(c);
+
+            }
         }
 
 
