@@ -16,7 +16,6 @@ package org.candlepin.policy.test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -141,25 +140,17 @@ public class AutobindRulesTest {
         List<Pool> pools = new LinkedList<Pool>();
         pools.add(pool);
 
-        try {
-            autobindRules.selectBestPools(consumer,
+
+        List<PoolQuantity> poolList = autobindRules.selectBestPools(consumer,
                 new String[]{ productId }, pools, compliance, null, new HashSet<String>());
-            fail();
-        }
-        catch (RuntimeException e) {
-            // expected
-        }
+
+        assertEquals(null, poolList);
 
         // Try again with explicitly setting the consumer to cert v1:
         consumer.setFact("system.certificate_version", "1.0");
-        try {
-            autobindRules.selectBestPools(consumer,
+        poolList = autobindRules.selectBestPools(consumer,
                 new String[]{ productId }, pools, compliance, null, new HashSet<String>());
-            fail();
-        }
-        catch (RuntimeException e) {
-            // expected
-        }
+        assertEquals(null, poolList);
     }
 
     @Test
@@ -373,15 +364,16 @@ public class AutobindRulesTest {
         return p;
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testSelectBestPoolNoPools() {
         when(this.prodAdapter.getProductById(HIGHEST_QUANTITY_PRODUCT))
             .thenReturn(new Product(HIGHEST_QUANTITY_PRODUCT, HIGHEST_QUANTITY_PRODUCT));
 
         // There are no pools for the product in this case:
-        autobindRules.selectBestPools(consumer,
+        List<PoolQuantity> result = autobindRules.selectBestPools(consumer,
             new String[] {HIGHEST_QUANTITY_PRODUCT}, new LinkedList<Pool>(), compliance,
             null, new HashSet<String>());
+        assertEquals(null, result);
     }
 
     @Test

@@ -72,8 +72,9 @@ public class AutobindRules {
 
         // TODO: Not the best behavior:
         if (pools.size() == 0) {
-            throw new RuntimeException("No entitlements for products: " +
+            log.info("No entitlements for products: " +
                 Arrays.toString(productIds));
+            return null;
         }
 
         if (log.isDebugEnabled()) {
